@@ -24,6 +24,7 @@ serials_column = 'F'
 mac_column = 'G'
 # ######################################################################################################################
 interface_list = {}
+shard_url = ()
 configfiles = []
 serials = []
 device_names = []
@@ -201,6 +202,7 @@ def meraki_port_structure(i):
 
 
 def pull_organization_id(head):
+    global shard_url
     url = "https://api.meraki.com/api/v0/organizations"
     payload = {}
     response = requests.request("GET", url, headers=head, data=payload)
@@ -210,8 +212,12 @@ def pull_organization_id(head):
         name = dicti["name"]
         if name == organization_id:
             org_id = dicti["id"]
+            shard_url = dicti["url"]
+            urllenght = shard_url.find('com') + 3
+            shard_url = shard_url[:urllenght]
             print("\n#################################################\n")
             print(name + "\n" + "Organization ID: " + org_id)
+            print("Organization Shard URL: " + shard_url)
             print("\n#################################################\n")
             return org_id
         else:
@@ -222,7 +228,7 @@ def pull_organization_networks(head):
     global net_dictionary
     global organization_id
     organization_id = pull_organization_id(head)
-    url = "https://api.meraki.com/api/v0/organizations/" + organization_id + "/networks"
+    url = shard_url + "/api/v0/organizations/" + organization_id + "/networks"
     payload = {}
     response = requests.request("GET", url, headers=head, data=payload)
     response = response.content
@@ -265,7 +271,7 @@ def meraki_claim_serial(network, addr, head):
             print("########################################")
             print("CLAIMING SERIAL NUMBER - " + sl)
             print("########################################")
-            url = ("https://api.meraki.com/api/v0/networks/" + net + "/devices/claim")
+            url = shard_url + "/api/v0/networks/" + net + "/devices/claim"
             print(url)
             payload = {
                 "serial": sl,
@@ -275,7 +281,7 @@ def meraki_claim_serial(network, addr, head):
             response = requests.request("POST", url, headers=head, data=payload)
             print(response.text.encode('utf8'))
 
-            url = ("https://api.meraki.com/api/v0/networks/" + net + "/devices/" + sl)
+            url = shard_url + "/api/v0/networks/" + net + "/devices/" + sl
             print(url)
             payload = {
                 "name": device_names[incr],
@@ -316,8 +322,7 @@ def meraki_ms_config(head):
             reg = re.compile(r'(TenGigabit|Gigabit|Fast)Ethernet(\d).(\d).(\d+)')
             number = reg.search(interfaces['number'])
             # if number and number[2] == swsn:
-            url = "https://api.meraki.com/api/v0/devices/" + sl + "/switchPorts/" + \
-                  number[4]
+            url = shard_url + "/api/v0/devices/" + sl + "/switchPorts/" + number[4]
             print(url)
             payload = meraki_port_structure(interfaces)
             print(payload)
